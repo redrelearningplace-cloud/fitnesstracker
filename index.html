@@ -818,7 +818,8 @@ function renderSchedule(){
       const isRun=!!RUN_WORKOUTS[tk];
       const t=isRun?RUN_WORKOUTS[tk]:T[tk];
       if(!t)return;
-      const done=get(dk(wi,di));
+      const isStrDay=tk&&tk.startsWith('strength');
+      const done=get(dk(wi,isStrDay?2:di));
       const yd=get(yk(wi,di));
       const isRest=tk==='rest';
       const isFlex=tk==='flex-sunday';
@@ -1131,6 +1132,7 @@ function renderStrength(){
 function togStrengthRef(){set('sref_open',!get('sref_open'));renderStrength();}
 
 function openStrengthDetail(wi){
+  curWeek=wi;curDay=2; // canonical strength day index
   const sk=getStrengthKey(wi);
   const sw=STRENGTH_WEEKS[sk];
   const done=get(dk(wi,2));
