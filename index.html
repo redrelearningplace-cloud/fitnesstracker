@@ -596,9 +596,9 @@ const RUN_WORKOUTS={
 const T={
   yoga:{type:"yoga",icon:"🧘",label:"Yoga",sub:"Evening session",tags:["tag-p","tag-r"],secs:[{l:"Session",items:["30–40 min · Hatha or slow flow","Warrior III — 45s each leg","Tree pose — 30s each leg","Boat pose — 3×20s","Pigeon — 60s each side","Ankle circles to close"]}],cd:false,str:false},
   "yoga-build":{type:"yoga",icon:"🧘",label:"Yoga",sub:"Evening flow + core",tags:["tag-p","tag-st"],secs:[{l:"Session",items:["35–45 min · vinyasa flow","Warrior III — 45s each leg","Single-leg RDL bodyweight — 3×8","Hollow holds — 3×20s","Side plank — 2×20s each side","Boat pose — 3×15s"]}],cd:false,str:false},
-  "strength-base":{type:"strength",icon:"💪",label:"Strength",sub:"Core + arms + ankles",tags:["tag-st","tag-p"],secs:[{l:"Core & arms",items:["Plank — 3×30s","Dead bugs — 3×10","Barbell rows — 3×10","Push-ups or press — 3×10","Overhead press — 3×10"]},{l:"Ankle stability",items:["Single-leg calf raise — 2×15 each","Band eversions — 2×15 each ankle","Single-leg balance — 30s each foot"]}],cd:false,str:true},
-  "strength-build":{type:"strength",icon:"💪",label:"Strength",sub:"Progressive overload",tags:["tag-st","tag-p"],secs:[{l:"Core & arms",items:["Weighted plank — 3×30s","Dead bugs — 3×12","Barbell curl — 3×10","Tricep dips — 3×10","Barbell rows — 3×12","Overhead press — 3×10"]},{l:"Lower stability",items:["Split squats — 3×10 each leg","Single-leg calf raise — 3×12 each","Band eversions — 2×15 each"]}],cd:false,str:true},
-  "strength-maint":{type:"strength",icon:"💪",label:"Strength",sub:"Maintenance",tags:["tag-st"],secs:[{l:"Session",items:["Plank — 2×30s","Dead bugs — 2×12","Push-ups — 2×10","Barbell rows — 2×10","Skip heavy leg work this phase"]}],cd:false,str:true},
+  "strength-base":{type:"strength",icon:"💪",label:"Strength",sub:"Foundation",tags:["tag-st","tag-p"],stub:true},
+  "strength-build":{type:"strength",icon:"💪",label:"Strength",sub:"Build",tags:["tag-st","tag-p"],stub:true},
+  "strength-maint":{type:"strength",icon:"💪",label:"Strength",sub:"Peak maintenance",tags:["tag-st"],stub:true},
   cycle:{type:"cycle",icon:"🚴",label:"Cycling",sub:"Zone 2",tags:["tag-e","tag-r"],secs:[{l:"Session",items:["30–45 min · Zone 2, conversational","Smooth cadence","Outdoor or stationary"]}],cd:false,str:true},
   "cycle-recover":{type:"cycle",icon:"🚴",label:"Cycling",sub:"Active recovery",tags:["tag-r"],secs:[{l:"Session",items:["30–40 min · Zone 1–2","Flush the legs","Trail ride if possible"]}],cd:false,str:false},
   "flex-sunday":{type:"flex",icon:"⛰",label:"Hike or cycle",sub:"Your call",tags:["tag-h","tag-r"],flex:true,
@@ -707,15 +707,35 @@ const STRENGTH_WEEKS={
 
 // Map week index to strength key
 function getStrengthKey(wi){
+  // Use actual scheduled day (respects swaps) to determine which block
+  const days=getWeekDays(wi);
+  const tk=days[2]; // Wednesday is always the strength slot
   const w=WEEKS[wi];
-  if(w.p===0) return wi<=1?'s_0_0':'s_0_1';
-  if(w.p===1){
+  // Map template key + week to detailed strength block
+  if(tk==='strength-base'){
+    if(w.p===0) return wi<=1?'s_0_0':'s_0_1';
+    return 's_3_0'; // taper
+  }
+  if(tk==='strength-build'){
     if(wi<=5)return 's_1_0';
     if(wi<=7)return 's_1_1';
     return 's_1_2';
   }
+  if(tk==='strength-maint'){
+    return wi<=11?'s_2_0':'s_2_1';
+  }
+  // fallback
+  if(w.p===0) return wi<=1?'s_0_0':'s_0_1';
+  if(w.p===1){if(wi<=5)return 's_1_0';if(wi<=7)return 's_1_1';return 's_1_2';}
   if(w.p===2) return wi<=11?'s_2_0':'s_2_1';
   return 's_3_0';
+}
+// Get the actual strength template name from schedule for display
+function getStrengthTemplateName(wi){
+  const days=getWeekDays(wi);
+  const tk=days[2];
+  const names={'strength-base':'Strength','strength-build':'Strength','strength-maint':'Strength (maintenance)'};
+  return names[tk]||'Strength';
 }
 
 // ── STORAGE ──────────────────────────────────────────────
@@ -739,7 +759,7 @@ const cck=(wi,di)=>`cc_${wi}_${di}`;
 function totalDone(){const s=ld();return WEEKS.reduce((a,w,wi)=>a+getWeekDays(wi).filter((_,di)=>s[dk(wi,di)]).length,0)}
 function totalRunsDone(){const s=ld();return WEEKS.reduce((a,w,wi)=>{const days=getWeekDays(wi);return a+w.runIdx.filter(di=>s[dk(wi,di)]).length;},0);}
 function totalRunsPlanned(){return WEEKS.reduce((a,w)=>a+w.runIdx.length,0);}
-function totalStrengthDone(){const s=ld();return WEEKS.reduce((a,w,wi)=>a+( s[dk(wi,2)]?1:0 ),0);}
+function totalStrengthDone(){const s=ld();return WEEKS.reduce((a,w,wi)=>{const days=getWeekDays(wi);const hasSt=days[2]&&days[2].startsWith('strength');return a+(hasSt&&s[dk(wi,2)]?1:0);},0);}
 function totalStrengthPlanned(){return WEEKS.length;}
 function runStreak(){const s=ld();let c=0;outer:for(let wi=WEEKS.length-1;wi>=0;wi--){const days=getWeekDays(wi);for(let ri=WEEKS[wi].runIdx.length-1;ri>=0;ri--){const di=WEEKS[wi].runIdx[ri];if(s[dk(wi,di)])c++;else break outer;}}return c;}
 function strengthStreak(){const s=ld();let c=0;for(let wi=WEEKS.length-1;wi>=0;wi--){if(s[dk(wi,2)])c++;else break;}return c;}
@@ -803,7 +823,9 @@ function renderSchedule(){
       const isRest=tk==='rest';
       const isFlex=tk==='flex-sunday';
       const fc=isFlex?get(fk(wi)):null;
-      const meta=isRest?'Recovery':isFlex?(fc?`${fc==='hike'?'Hiking':'Cycling'} planned`:'Choose hike or cycle'):(isRun?t.paceSummary:t.sub);
+      const isStrength=tk&&tk.startsWith('strength');
+      const strengthSub=isStrength?STRENGTH_WEEKS[getStrengthKey(wi)].sub:null;
+      const meta=isRest?'Recovery':isFlex?(fc?`${fc==='hike'?'Hiking':'Cycling'} planned`:'Choose hike or cycle'):isStrength?strengthSub:(isRun?t.paceSummary:t.sub);
       const isSelected=isEditing&&swapFirstDay===di;
       const swapClass=isEditing?(isSelected?' swap-selected':' swap-selectable'):'';
       const clickFn=isEditing?`handleSwapTap(${wi},${di})`:`openDay(${wi},${di})`;
@@ -847,10 +869,16 @@ function setPhase(p){curPhase=p;renderSchedule();}
 
 // ── DETAIL ────────────────────────────────────────────────
 function openDay(wi,di){
+  const tk=getWeekDays(wi)[di];
+  // Route strength days to the unified strength detail
+  if(tk&&tk.startsWith('strength')){
+    openStrengthDetailFromSchedule(wi);
+    return;
+  }
   curWeek=wi;curDay=di;
-  const tk=WEEKS[wi].days[di];
   const isRun=!!RUN_WORKOUTS[tk];
   const t=isRun?RUN_WORKOUTS[tk]:T[tk];
+  if(!t)return;
   showYoga=!get(yk(wi,di));
   document.getElementById('dh-title').textContent=`${t.label} — ${DAYS[di]}`;
   document.getElementById('dh-sub').textContent=`Week ${WEEKS[wi].n} · ${isRun?t.paceSummary:t.sub}`;
@@ -862,7 +890,8 @@ function openDay(wi,di){
 
 function renderDetailBody(){
   const wi=curWeek,di=curDay;
-  const tk=WEEKS[wi].days[di];
+  const tk=getWeekDays(wi)[di];
+  if(tk&&tk.startsWith('strength')){openStrengthDetailFromSchedule(wi);return;}
   const isRun=!!RUN_WORKOUTS[tk];
   const t=isRun?RUN_WORKOUTS[tk]:T[tk];
   const done=get(dk(wi,di));
@@ -1076,16 +1105,20 @@ function renderStrength(){
     const sk=getStrengthKey(wi);
     const sw=STRENGTH_WEEKS[sk];
     const done=get(dk(wi,2));
+    const scheduleDays=getWeekDays(wi);
+    const schedTk=scheduleDays[2];
+    const schedT=T[schedTk];
+    const schedSub=schedT?schedT.sub:sw.sub;
     h+=`<div class="run-week-label"><span>Week ${week.n}</span><span class="run-week-mi">${sw.label}</span></div>`;
     h+=`<div class="run-list">`;
     h+=`<div class="run-row${done?' done':''}" onclick="openStrengthDetail(${wi})">
       <div class="rr-intensity ${sw.intensity}"></div>
       <div class="rr-mid">
-        <div class="rr-title">${sw.label}</div>
+        <div class="rr-title">${getStrengthTemplateName(wi)}</div>
         <div class="rr-meta">${sw.sub}</div>
       </div>
       <div class="rr-right">
-        <div class="rr-dist" style="font-size:13px">${['Opener','Main','Finisher'].map(s=>`<span style="color:var(--t3)">${s}</span>`).join(' · ')}</div>
+        <div class="rr-dist" style="font-size:13px;color:var(--t3)">${sw.label}</div>
         <div class="rr-check">${done?'✓':''}</div>
       </div>
     </div>`;
@@ -1153,8 +1186,8 @@ function openStrengthDetail(wi){
     <textarea placeholder="Weights used, how it felt, anything to adjust next time..." oninput="saveStrengthNote(${wi},this.value)">${note}</textarea>
   </div></div>`;
 
-  document.getElementById('dh-title').textContent=`${sw.label} — Wk ${WEEKS[wi].n}`;
-  document.getElementById('dh-sub').textContent=`Strength · ${sw.sub}`;
+  document.getElementById('dh-title').textContent=`${getStrengthTemplateName(wi)} — Wk ${WEEKS[wi].n}`;
+  document.getElementById('dh-sub').textContent=`${sw.label} · ${sw.sub}`;
   document.getElementById('detail-body').innerHTML=h;
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('screen-detail').classList.add('active');
@@ -1165,6 +1198,17 @@ function openStrengthDetail(wi){
     document.getElementById('screen-runs').classList.add('active');
     document.querySelectorAll('.ni')[1].classList.add('active');
     renderStrength();window.scrollTo(0,0);
+    rebindBackBtn();
+  };
+}
+
+function openStrengthDetailFromSchedule(wi){
+  openStrengthDetail(wi);
+  document.getElementById('back-btn').onclick=()=>{
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    document.getElementById('screen-schedule').classList.add('active');
+    document.querySelectorAll('.ni')[0].classList.add('active');
+    renderSchedule();window.scrollTo(0,0);
     rebindBackBtn();
   };
 }
@@ -1234,7 +1278,7 @@ function renderRuns(){
 }
 
 function togglePaceRef(){paceRefOpen=!paceRefOpen;renderRuns()}
-function setRunPhase(p){runPhaseFilter=p;renderRuns()}
+function setRunPhase(p){runPhaseFilter=p;if(workoutTab==='strength')renderStrength();else renderRuns();}
 
 function openRunDetail(wi,di){
   curRunWi=wi;curRunDi=di;
