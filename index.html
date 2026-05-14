@@ -79,6 +79,13 @@ body{min-height:100vh;background:var(--bg);overflow-x:hidden}
 .dr-check{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--b3);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--bg)}
 .day-row.done .dr-check{background:var(--green);border-color:var(--green)}
 .ydot{width:8px;height:8px;border-radius:50%;background:var(--purple)}
+/* swap mode */
+.week-edit-btn{font-size:12px;font-weight:600;color:var(--t3);background:none;border:1px solid var(--b2);border-radius:99px;padding:4px 10px;cursor:pointer;transition:all .15s;flex-shrink:0}
+.week-edit-btn.editing{color:var(--green);border-color:var(--green-dim);background:var(--green-dim)}
+.swap-hint{font-size:13px;color:var(--t2);padding:6px 18px 4px;font-style:italic}
+.day-row.swap-selectable{border-color:var(--b3)}
+.day-row.swap-selected{border-color:var(--blue) !important;background:var(--blue-dim) !important}
+.day-row.swap-selected .dr-title{color:var(--blue)}
 
 /* detail screen */
 .detail-header{padding:14px 18px 12px;background:var(--bg);border-bottom:1px solid var(--b1);display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:20}
@@ -301,14 +308,18 @@ textarea::placeholder{color:var(--t3)}
   <div class="detail-body" id="detail-body"></div>
 </div>
 
-<!-- RUNS -->
+<!-- WORKOUTS -->
 <div class="screen" id="screen-runs">
   <div class="topbar" style="margin-bottom:0">
     <div class="topbar-row">
-      <div class="topbar-title">Runs</div>
+      <div class="topbar-title" id="workouts-title">Workouts</div>
+    </div>
+    <div style="display:flex;gap:0;margin-top:10px;background:var(--s2);border-radius:var(--r);padding:3px">
+      <button id="toggle-runs" onclick="setWorkoutTab('runs')" style="flex:1;padding:8px;border-radius:var(--rsm);border:none;font-size:14px;font-weight:600;cursor:pointer;background:var(--green-dim);color:var(--green);transition:all .15s">Runs</button>
+      <button id="toggle-strength" onclick="setWorkoutTab('strength')" style="flex:1;padding:8px;border-radius:var(--rsm);border:none;font-size:14px;font-weight:600;cursor:pointer;background:transparent;color:var(--t3);transition:all .15s">Strength</button>
     </div>
   </div>
-  <div class="runs-screen" id="runs-body"></div>
+  <div id="runs-body"></div>
 </div>
 
 <!-- PROGRESS -->
@@ -324,7 +335,7 @@ textarea::placeholder{color:var(--t3)}
 <!-- BOTTOM NAV -->
 <nav class="bnav">
   <div class="ni active" onclick="showScreen('schedule',this)"><div class="ni-icon">📅</div><div class="ni-label">Schedule</div></div>
-  <div class="ni" onclick="showScreen('runs',this)"><div class="ni-icon">🏃</div><div class="ni-label">Runs</div></div>
+  <div class="ni" onclick="showScreen('runs',this)"><div class="ni-icon">💪</div><div class="ni-label">Workouts</div></div>
   <div class="ni" onclick="showScreen('progress',this)"><div class="ni-icon">📊</div><div class="ni-label">Progress</div></div>
   <div class="ni" onclick="showScreen('flows',this)"><div class="ni-icon">🧘</div><div class="ni-label">Flows</div></div>
 </nav>
@@ -626,6 +637,87 @@ const WEEKS=[
   {p:3,n:16,mi:12, days:["yoga","shakeout","strength-base","rest","rest","taper-long-2","flex-sunday"], runIdx:[1,5]},
 ];
 
+
+const STRENGTH_REF=[
+  {type:"Push/pull balance",note:"Pull volume matches or exceeds push every phase. Protects the shoulder through 13 miles."},
+  {type:"Equipment",note:"Adjustable dumbbells · Barbell + bench · Resistance bands · Pull-up bar"},
+  {type:"Phase 3 drop",note:"2 sets instead of 3 in peak weeks. Hard runs are the priority — hold what you built."},
+  {type:"Single-leg RDL",note:"Present every phase. Trains the exact loading moment where most running injuries happen."},
+  {type:"Turkish get-up",note:"Skill-based, low fatigue. One per side. Builds shoulder stability and body awareness."},
+];
+
+const STRENGTH_WEEKS={
+  // Phase 1 wk 1-2
+  "s_0_0":{label:"Foundation",sub:"Movement quality, baseline strength",intensity:"easy",
+    opener:["Inchworm ×5","Bear crawl 20ft ×3","Plank to down dog ×8"],
+    push:["Push-ups — 3×10","DB overhead press — 3×10","Lateral raise — 3×12"],
+    pull:["DB bent row — 3×10","Band pull-apart — 3×15","Bicep curl — 3×10"],
+    stability:["Single-leg calf raise — 2×12 each","Band eversion — 2×15 each","Single-leg balance — 30s each"],
+    finisher:["Single-leg deadlift (bodyweight) — 2×8 each side"]},
+  // Phase 1 wk 3-4
+  "s_0_1":{label:"Foundation +",sub:"Same patterns, add reps",intensity:"easy",
+    opener:["Inchworm ×6","Bear crawl 20ft ×4","Plank to down dog ×10"],
+    push:["Push-ups — 3×12","DB overhead press — 3×12","Lateral raise — 3×15"],
+    pull:["DB bent row — 3×12","Band pull-apart — 3×15","Bicep curl — 3×12"],
+    stability:["Single-leg calf raise — 2×15 each","Band eversion — 2×15 each","Single-leg balance — 30s each"],
+    finisher:["Single-leg deadlift (bodyweight) — 2×10 each side"]},
+  // Phase 2 wk 5-6
+  "s_1_0":{label:"Build",sub:"Introduce barbell, compound work",intensity:"mod",
+    opener:["Pike push-up ×10","Renegade row — 3×6 each side","Squat to press (light DB) — 3×10"],
+    push:["Barbell bench press — 3×8","DB Arnold press — 3×10","Lateral raise — 3×12"],
+    pull:["Barbell row — 3×8","Pull-up or band-assisted — 3×6","Face pull with band — 3×15"],
+    stability:["Single-leg calf raise — 3×12 each","Band eversion — 2×15 each","Single-leg RDL (light DB) — 2×8 each"],
+    finisher:["Turkish get-up — 1×3 each side, slow and controlled"]},
+  // Phase 2 wk 7-8
+  "s_1_1":{label:"Build +",sub:"Add load, unilateral pressing",intensity:"mod",
+    opener:["Pike push-up ×12","Renegade row — 3×8 each side","Squat to press — 3×12"],
+    push:["Barbell bench press — 3×8 (add weight)","Single-arm DB press — 3×10 each","Lateral raise — 3×15"],
+    pull:["Barbell row — 3×10","Pull-up — 3×8","Face pull with band — 3×15"],
+    stability:["Single-leg calf raise — 3×15 each","Banded monster walk — 2×20 steps","Single-leg RDL (DB) — 3×10 each"],
+    finisher:["Bear crawl 30ft ×4"]},
+  // Phase 2 wk 9-10
+  "s_1_2":{label:"Build — angle shift",sub:"New angles, maintain load",intensity:"mod",
+    opener:["Inchworm to push-up ×6","Pike push-up ×12","Plank shoulder tap ×20"],
+    push:["Incline DB press — 3×10","Barbell overhead press — 3×8","Diamond push-up — 3×10"],
+    pull:["Pull-up — 3×8","Single-arm DB row — 3×10 each","Band pull-apart — 3×20"],
+    stability:["Single-leg calf raise — 3×15 each","Single-leg RDL — 3×10 each","Single-leg balance eyes closed — 30s each"],
+    finisher:["Renegade row — 3×8 each side (heavier than wk 5)"]},
+  // Phase 3 wk 11-12
+  "s_2_0":{label:"Peak — maintain",sub:"2 sets, keep load, protect recovery",intensity:"easy",
+    opener:["Inchworm ×5","Bear crawl 20ft ×3","Plank to down dog ×8"],
+    push:["Barbell bench press — 2×8","DB overhead press — 2×10"],
+    pull:["Pull-up — 2×8","Band pull-apart — 2×15"],
+    stability:["Single-leg calf raise — 2×12 each","Single-leg RDL — 2×8 each"],
+    finisher:["Single-leg deadlift — 2×8 each side"]},
+  // Phase 3 wk 13-14
+  "s_2_1":{label:"Peak — bodyweight shift",sub:"Lower recovery cost before race",intensity:"easy",
+    opener:["Pike push-up ×10","Plank to down dog ×8","Inchworm ×5"],
+    push:["Push-ups — 2×15","Single-arm DB press — 2×10 each"],
+    pull:["Pull-up — 2×8","Single-arm DB row — 2×10 each"],
+    stability:["Banded monster walk — 2×20 steps","Single-leg balance eyes closed — 30s each"],
+    finisher:["Turkish get-up — 1×2 each side"]},
+  // Phase 4 wk 15-16
+  "s_3_0":{label:"Taper",sub:"Maintain movement, no new stimulus",intensity:"easy",
+    opener:["Inchworm ×5","Plank to down dog ×6"],
+    push:["Push-ups — 2×12","DB overhead press — 2×10"],
+    pull:["Pull-up — 2×6","Band pull-apart — 2×12"],
+    stability:["Single-leg calf raise — 2×10 each","Single-leg balance — 30s each"],
+    finisher:["Single-leg deadlift (bodyweight) — 2×6 each side — skip if legs are heavy"]},
+};
+
+// Map week index to strength key
+function getStrengthKey(wi){
+  const w=WEEKS[wi];
+  if(w.p===0) return wi<=1?'s_0_0':'s_0_1';
+  if(w.p===1){
+    if(wi<=5)return 's_1_0';
+    if(wi<=7)return 's_1_1';
+    return 's_1_2';
+  }
+  if(w.p===2) return wi<=11?'s_2_0':'s_2_1';
+  return 's_3_0';
+}
+
 // ── STORAGE ──────────────────────────────────────────────
 function ld(){try{return JSON.parse(localStorage.getItem('hmt5')||'{}')}catch{return {}}}
 function sv(s){try{localStorage.setItem('hmt5',JSON.stringify(s))}catch{}}
@@ -644,7 +736,7 @@ const yck=(wi,di,i)=>`yc_${wi}_${di}_${i}`;
 const cck=(wi,di)=>`cc_${wi}_${di}`;
 
 // ── STATS ─────────────────────────────────────────────────
-function totalDone(){const s=ld();return WEEKS.reduce((a,w,wi)=>a+w.days.filter((_,di)=>s[dk(wi,di)]).length,0)}
+function totalDone(){const s=ld();return WEEKS.reduce((a,w,wi)=>a+getWeekDays(wi).filter((_,di)=>s[dk(wi,di)]).length,0)}
 function totalWork(){return WEEKS.reduce((a,w)=>a+w.days.filter(d=>!['rest'].includes(d)).length,0)}
 function yogaStreak(){const s=ld();let c=0;for(let wi=WEEKS.length-1;wi>=0;wi--)for(let di=6;di>=0;di--){if(s[yk(wi,di)])c++;else if(c>0)return c;}return c;}
 function workStreak(){const s=ld();let c=0;outer:for(let wi=WEEKS.length-1;wi>=0;wi--)for(let di=6;di>=0;di--){if(WEEKS[wi].days[di]==='rest')continue;if(s[dk(wi,di)])c++;else break outer;}return c;}
@@ -654,6 +746,10 @@ function totalPlanMiles(){return WEEKS.reduce((a,w)=>a+w.mi,0);}
 // ── SCREENS ──────────────────────────────────────────────
 let curPhase=0,curWeek=null,curDay=null,showYoga=false,curRunWi=null,curRunDi=null;
 let runPhaseFilter=0,paceRefOpen=false,flowsExpanded={};
+let swapEditWeek=null,swapFirstDay=null;
+// per-week day overrides: swapOverrides[wi] = [...days]
+function getWeekDays(wi){return get('swap_'+wi)||WEEKS[wi].days;}
+function saveWeekDays(wi,days){set('swap_'+wi,days);}
 
 function showScreen(id,el){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
@@ -661,7 +757,7 @@ function showScreen(id,el){
   document.getElementById('screen-'+id).classList.add('active');
   if(el)el.classList.add('active');
   if(id==='progress')renderProgress();
-  if(id==='runs')renderRuns();
+  if(id==='runs'){if(workoutTab==='strength')renderStrength();else renderRuns();}
   if(id==='flows')renderFlowsTab();
   window.scrollTo(0,0);
 }
@@ -684,11 +780,15 @@ function renderSchedule(){
   let h='';
   weeks.forEach(week=>{
     const wi=WEEKS.indexOf(week);
-    const workDays=week.days.filter(d=>d!=='rest');
-    const doneDays=week.days.filter((d,di)=>d!=='rest'&&get(dk(wi,di)));
+    const days=getWeekDays(wi);
+    const workDays=days.filter(d=>d!=='rest');
+    const doneDays=days.filter((d,di)=>d!=='rest'&&get(dk(wi,di)));
     const wpct=workDays.length?Math.round(doneDays.length/workDays.length*100):0;
-    h+=`<div class="week-section"><div class="week-label"><span>Week ${week.n}</span><span class="week-prog">${doneDays.length}/${workDays.length} · ${wpct}%</span></div></div><div class="day-list">`;
-    week.days.forEach((tk,di)=>{
+    const isEditing=swapEditWeek===wi;
+    h+=`<div class="week-section"><div class="week-label"><span>Week ${week.n}</span><div style="display:flex;align-items:center;gap:8px"><span class="week-prog">${doneDays.length}/${workDays.length}</span><button class="week-edit-btn${isEditing?' editing':''}" onclick="event.stopPropagation();toggleSwapMode(${wi})">${isEditing?'Done':'Edit'}</button></div></div></div>`;
+    if(isEditing)h+=`<div class="swap-hint">${swapFirstDay===null?'Tap a day to move it':'Now tap the day to swap it with'}</div>`;
+    h+=`<div class="day-list">`;
+    days.forEach((tk,di)=>{
       const isRun=!!RUN_WORKOUTS[tk];
       const t=isRun?RUN_WORKOUTS[tk]:T[tk];
       if(!t)return;
@@ -698,15 +798,43 @@ function renderSchedule(){
       const isFlex=tk==='flex-sunday';
       const fc=isFlex?get(fk(wi)):null;
       const meta=isRest?'Recovery':isFlex?(fc?`${fc==='hike'?'Hiking':'Cycling'} planned`:'Choose hike or cycle'):(isRun?t.paceSummary:t.sub);
-      h+=`<div class="day-row${done?' done':''}${isRest?' rest':''}${yd&&!done?' yoga-m':''}" onclick="openDay(${wi},${di})">
+      const isSelected=isEditing&&swapFirstDay===di;
+      const swapClass=isEditing?(isSelected?' swap-selected':' swap-selectable'):'';
+      const clickFn=isEditing?`handleSwapTap(${wi},${di})`:`openDay(${wi},${di})`;
+      h+=`<div class="day-row${done?' done':''}${isRest?' rest':''}${yd&&!done?' yoga-m':''}${swapClass}" onclick="${clickFn}">
         <div class="dr-day"><div class="dr-dayname">${DAYS[di]}</div><div class="dr-icon">${t.icon}</div></div>
         <div class="dr-mid"><div class="dr-title">${t.label}</div><div class="dr-meta">${meta}</div></div>
-        <div class="dr-right"><div class="dr-check">${done?'✓':''}</div>${yd?'<div class="ydot"></div>':''}</div>
+        <div class="dr-right"><div class="dr-check">${done?'✓':''}</div>${yd&&!isEditing?'<div class="ydot"></div>':''}</div>
       </div>`;
     });
     h+=`</div>`;
   });
   document.getElementById('week-list').innerHTML=h;
+}
+
+
+function toggleSwapMode(wi){
+  if(swapEditWeek===wi){swapEditWeek=null;swapFirstDay=null;}
+  else{swapEditWeek=wi;swapFirstDay=null;}
+  renderSchedule();
+}
+
+function handleSwapTap(wi,di){
+  if(swapFirstDay===null){
+    swapFirstDay=di;
+    renderSchedule();
+  } else if(swapFirstDay===di){
+    swapFirstDay=null;
+    renderSchedule();
+  } else {
+    const days=[...getWeekDays(wi)];
+    const tmp=days[swapFirstDay];
+    days[swapFirstDay]=days[di];
+    days[di]=tmp;
+    saveWeekDays(wi,days);
+    swapFirstDay=null;
+    renderSchedule();
+  }
 }
 
 function setPhase(p){curPhase=p;renderSchedule();}
@@ -893,6 +1021,158 @@ document.getElementById('back-btn').onclick=()=>{
 };
 
 // ── RUNS TAB ─────────────────────────────────────────────
+
+let workoutTab='runs'; // 'runs' or 'strength'
+
+function setWorkoutTab(tab){
+  workoutTab=tab;
+  const rb=document.getElementById('toggle-runs');
+  const sb=document.getElementById('toggle-strength');
+  if(rb&&sb){
+    if(tab==='runs'){
+      rb.style.cssText='flex:1;padding:8px;border-radius:var(--rsm);border:none;font-size:14px;font-weight:600;cursor:pointer;background:var(--green-dim);color:var(--green);transition:all .15s';
+      sb.style.cssText='flex:1;padding:8px;border-radius:var(--rsm);border:none;font-size:14px;font-weight:600;cursor:pointer;background:transparent;color:var(--t3);transition:all .15s';
+    }else{
+      rb.style.cssText='flex:1;padding:8px;border-radius:var(--rsm);border:none;font-size:14px;font-weight:600;cursor:pointer;background:transparent;color:var(--t3);transition:all .15s';
+      sb.style.cssText='flex:1;padding:8px;border-radius:var(--rsm);border:none;font-size:14px;font-weight:600;cursor:pointer;background:var(--amber-dim);color:var(--amber);transition:all .15s';
+    }
+  }
+  if(tab==='runs')renderRuns();
+  else renderStrength();
+}
+
+function renderStrength(){
+  const refOpen=get('sref_open');
+  let h=`<div class="pace-ref" style="border-color:var(--amber-dim)">
+    <div class="pr-header" onclick="togStrengthRef()" style="color:var(--amber)">
+      <div class="pr-title" style="color:var(--amber)">Reference</div>
+      <div class="pr-chev">${refOpen?'▲':'▼'}</div>
+    </div>`;
+  if(refOpen){
+    h+=`<div style="display:flex;flex-direction:column;gap:1px;background:var(--b1)">`;
+    STRENGTH_REF.forEach(r=>{
+      h+=`<div style="background:var(--s1);padding:10px 16px"><div style="font-size:13px;color:var(--t2)">${r.type}</div><div style="font-size:13px;color:var(--t1);margin-top:3px;line-height:1.45">${r.note}</div></div>`;
+    });
+    h+=`</div>`;
+  }
+  h+=`</div>`;
+
+  // phase filter
+  h+=`<div class="run-phase-strip">`;
+  PHASES.forEach(p=>{
+    h+=`<button class="pchip${p.id===runPhaseFilter?' active':''}" onclick="setRunPhase(${p.id})">${p.l}</button>`;
+  });
+  h+=`</div>`;
+
+  const weeks=WEEKS.filter(w=>w.p===runPhaseFilter);
+  weeks.forEach(week=>{
+    const wi=WEEKS.indexOf(week);
+    const sk=getStrengthKey(wi);
+    const sw=STRENGTH_WEEKS[sk];
+    const done=get('sd_'+wi);
+    h+=`<div class="run-week-label"><span>Week ${week.n}</span><span class="run-week-mi">${sw.label}</span></div>`;
+    h+=`<div class="run-list">`;
+    h+=`<div class="run-row${done?' done':''}" onclick="openStrengthDetail(${wi})">
+      <div class="rr-intensity ${sw.intensity}"></div>
+      <div class="rr-mid">
+        <div class="rr-title">${sw.label}</div>
+        <div class="rr-meta">${sw.sub}</div>
+      </div>
+      <div class="rr-right">
+        <div class="rr-dist" style="font-size:13px">${['Opener','Main','Finisher'].map(s=>`<span style="color:var(--t3)">${s}</span>`).join(' · ')}</div>
+        <div class="rr-check">${done?'✓':''}</div>
+      </div>
+    </div>`;
+    h+=`</div>`;
+  });
+
+  document.getElementById('runs-body').innerHTML=h;
+}
+
+function togStrengthRef(){set('sref_open',!get('sref_open'));renderStrength();}
+
+function openStrengthDetail(wi){
+  const sk=getStrengthKey(wi);
+  const sw=STRENGTH_WEEKS[sk];
+  const done=get('sd_'+wi);
+  const note=get('sn_'+wi)||'';
+
+  const sck=k=>get('sc_'+wi+'_'+k);
+  const ciS=(k,text)=>{
+    const chk=sck(k);
+    return `<div class="ci${chk?' done':''}" onclick="togSItem('${wi}','${k}',this)">
+      <div class="ci-box">${chk?'✓':''}</div>
+      <div class="ci-text">${text}</div>
+    </div>`;
+  };
+
+  let h=`<div class="run-detail-body">`;
+
+  // reference card
+  h+=`<div class="rdb-card" style="border-color:var(--amber-dim)">
+    <div class="rdb-label" style="color:var(--amber)">SESSION OVERVIEW</div>
+    <div class="effort-note">${sw.label} · ${sw.sub}<br>Structure: Opener → Push → Pull → Stability → Finisher</div>
+  </div>`;
+
+  // opener
+  h+=`<div class="rdb-card"><div class="rdb-label">OPENER</div><div class="checklist">`;
+  sw.opener.forEach((item,i)=>{h+=ciS(`op_${i}`,item)});
+  h+=`</div></div>`;
+
+  // push
+  h+=`<div class="rdb-card"><div class="rdb-label">PUSH — chest · shoulders · triceps</div><div class="checklist">`;
+  sw.push.forEach((item,i)=>{h+=ciS(`pu_${i}`,item)});
+  h+=`</div></div>`;
+
+  // pull
+  h+=`<div class="rdb-card"><div class="rdb-label">PULL — back · biceps</div><div class="checklist">`;
+  sw.pull.forEach((item,i)=>{h+=ciS(`pl_${i}`,item)});
+  h+=`</div></div>`;
+
+  // stability
+  h+=`<div class="rdb-card"><div class="rdb-label">STABILITY — ankles · single-leg</div><div class="checklist">`;
+  sw.stability.forEach((item,i)=>{h+=ciS(`st_${i}`,item)});
+  h+=`</div></div>`;
+
+  // finisher
+  h+=`<div class="rdb-card"><div class="rdb-label">FINISHER</div><div class="checklist">`;
+  sw.finisher.forEach((item,i)=>{h+=ciS(`fi_${i}`,item)});
+  h+=`</div></div>`;
+
+  // mark done
+  h+=`<button class="mark-btn${done?' done':''}" style="${done?'background:var(--amber-dim);color:var(--amber);border-color:var(--amber-dim)':''}" onclick="markStrengthDone(${wi})">${done?'✓ Done':'Mark done'}</button>`;
+
+  // note
+  h+=`<div class="note-block" style="margin:10px 0 0"><div class="note-label">NOTES</div>
+    <textarea placeholder="Weights used, how it felt, anything to adjust next time..." oninput="saveStrengthNote(${wi},this.value)">${note}</textarea>
+  </div></div>`;
+
+  document.getElementById('dh-title').textContent=`${sw.label} — Wk ${WEEKS[wi].n}`;
+  document.getElementById('dh-sub').textContent=`Strength · ${sw.sub}`;
+  document.getElementById('detail-body').innerHTML=h;
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-detail').classList.add('active');
+  window.scrollTo(0,0);
+
+  document.getElementById('back-btn').onclick=()=>{
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    document.getElementById('screen-runs').classList.add('active');
+    document.querySelectorAll('.ni')[1].classList.add('active');
+    renderStrength();window.scrollTo(0,0);
+    rebindBackBtn();
+  };
+}
+
+function togSItem(wi,k,el){
+  const sk='sc_'+wi+'_'+k;
+  const now=tog(sk);
+  el.classList.toggle('done',now);
+  el.querySelector('.ci-box').innerHTML=now?'✓':'';
+  el.querySelector('.ci-text').style.cssText=now?'text-decoration:line-through;color:var(--t3)':'color:var(--t1)';
+}
+function markStrengthDone(wi){tog('sd_'+wi);openStrengthDetail(wi);renderStrength();}
+function saveStrengthNote(wi,v){set('sn_'+wi,v);}
+
 function renderRuns(){
   let h=``;
   // pace ref card
@@ -921,7 +1201,7 @@ function renderRuns(){
   const weeks=WEEKS.filter(w=>w.p===runPhaseFilter);
   weeks.forEach(week=>{
     const wi=WEEKS.indexOf(week);
-    const runsThisWeek=week.runIdx.map(di=>({di,tk:week.days[di]}));
+    const days=getWeekDays(wi);const runsThisWeek=week.runIdx.map(di=>({di,tk:days[di]}));
     const doneCount=runsThisWeek.filter(r=>get(dk(wi,r.di))).length;
     h+=`<div class="run-week-label"><span>Week ${week.n}</span><span class="run-week-mi">${doneCount}/${runsThisWeek.length} runs · ~${week.mi} mi planned</span></div>`;
     h+=`<div class="run-list">`;
